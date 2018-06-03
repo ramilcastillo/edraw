@@ -1,0 +1,25 @@
+options:
+  docker: true
+
+pipelines:
+  branches:
+    master:
+      - step:
+          name: dotnet build
+          image: microsoft/dotnet
+          script:
+            - dotnet restore ./$SOLUTION_NAME && dotnet publish ./$SOLUTION_NAME -c Release -o $BITBUCKET_CLONE_DIR/dist/api/
+          artifacts:
+            - dist/**
+      - step:
+          name: AWS Deploy
+          image: python:3.5.1
+          script:
+            - ls -a
+            - apt-get update # required to install zip
+            - apt-get install -y zip # required for packaging up the application
+            - pip install boto3==1.3.0 # required for beanstalk_deploy.py
+            - cd $BITBUCKET_CLONE_DIR/dist/api/
+            - zip /tmp/artifact.zip * # package up the application for deployment
+            - cd -
+            - python beanstalk_deploy.py # run the deployment script
